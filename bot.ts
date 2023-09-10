@@ -73,9 +73,11 @@ bot.on("message:text", async (ctx) => {
   const inputText = ctx.message.text;
   const fromId = ctx.message.from.id;
 
-  if (inputText.startsWith("https://telegra.ph/")) {
-    try {
-      const response = await fetch(inputText);
+  try {
+    const url = new URL(inputText);
+
+    if (url.hostname === "telegra.ph") {
+      const response = await fetch(url);
       const text = await response.text();
 
       const doc = new DOMParser().parseFromString(text, "text/html");
@@ -112,11 +114,15 @@ bot.on("message:text", async (ctx) => {
         title,
       });
       await ctx.reply("saved to your history.");
-    } catch (error) {
+    } else {
+      throw new TypeError("Invalid telegra.ph link.");
+    }
+  } catch (error) {
+    if (error instanceof TypeError) {
+      await ctx.reply(error.message);
+    } else {
       await ctx.reply(`Error fetching or parsing the page: ${error.message}`);
     }
-  } else {
-    await ctx.reply("Please send a valid telegra.ph link.");
   }
 });
 
