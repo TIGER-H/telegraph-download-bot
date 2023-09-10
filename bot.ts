@@ -1,12 +1,35 @@
-import { Bot, DOMParser, Element, InputMediaPhoto } from "./deps.deno.ts";
+import {
+  Bot,
+  Context,
+  DenoKVAdapter,
+  DOMParser,
+  Element,
+  InputMediaPhoto,
+  session,
+  SessionFlavor,
+} from "./deps.deno.ts";
 
-const baseURL = new URL("https://telegra.ph");
-export const bot = new Bot(Deno.env.get("TOKEN") || "");
+const BASE_URL = new URL("https://telegra.ph");
+
+interface sessionData {
+  history: Array<{ link: string; timestamp: number; fromId: number }>;
+}
+type myContext = Context & SessionFlavor<sessionData>;
+
+const kv = await Deno.openKv("./kv.db");
+
+export const bot = new Bot<myContext>(Deno.env.get("TOKEN") || "");
+
+bot.use(session({
+  initial: () => ({ history: [] }),
+  storage: new DenoKVAdapter(kv),
+}));
 
 bot.command("start", (ctx) => ctx.reply("Welcome! Send me a telegra.ph link!"));
 
 bot.on("message:text", async (ctx) => {
   const inputText = ctx.message.text;
+  const fromId = ctx.message.from.id;
 
   if (inputText.startsWith("https://telegra.ph/")) {
     try {
@@ -27,17 +50,42 @@ bot.on("message:text", async (ctx) => {
           const mediaGroup = batch.map((src) =>
             ({
               type: "photo",
-              media: new URL(src!, baseURL).toString(),
+              media: new URL(src!, BASE_URL).toString(),
             }) as InputMediaPhoto
           );
           await ctx.replyWithMediaGroup(mediaGroup);
         }
       }
+
+      ctx.session.history.push({
+        link: inputText,
+        timestamp: Date.now(),
+        fromId,
+      });
+      await ctx.reply("saved to your history.");
     } catch (error) {
       await ctx.reply(`Error fetching or parsing the page: ${error.message}`);
     }
   } else {
     await ctx.reply("Please send a valid telegra.ph link.");
+  }
+});
+
+bot.command("history", async (ctx) => {
+  const history = ctx.session.history;
+  const userHistory = history.filter((entry) =>
+    entry.fromId === ctx.message?.from.id
+  );
+
+  if (userHistory.length === 0) {
+    await ctx.reply("No history found.");
+  } else {
+    const historyMessages = userHistory.map((entry, index) => {
+      const date = new Date(entry.timestamp).toLocaleString();
+      return `${index + 1}. [${date}] - ${entry.link}`;
+    }).join("\n");
+
+    await ctx.reply(historyMessages, { parse_mode: "HTML" });
   }
 });
 
