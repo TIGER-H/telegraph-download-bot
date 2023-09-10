@@ -26,6 +26,23 @@ bot.use(session({
 }));
 
 bot.command("start", (ctx) => ctx.reply("Welcome! Send me a telegra.ph link!"));
+bot.command("history", async (ctx) => {
+  const history = ctx.session.history;
+  const userHistory = history.filter((entry) =>
+    entry.fromId === ctx.message?.from.id
+  );
+
+  if (userHistory.length === 0) {
+    await ctx.reply("No history found.");
+  } else {
+    const historyMessages = userHistory.map((entry, index) => {
+      const date = new Date(entry.timestamp).toLocaleString();
+      return `${index + 1}. [${date}] - ${entry.link}`;
+    }).join("\n");
+
+    await ctx.reply(historyMessages, { parse_mode: "HTML" });
+  }
+});
 
 bot.on("message:text", async (ctx) => {
   const inputText = ctx.message.text;
@@ -68,24 +85,6 @@ bot.on("message:text", async (ctx) => {
     }
   } else {
     await ctx.reply("Please send a valid telegra.ph link.");
-  }
-});
-
-bot.command("history", async (ctx) => {
-  const history = ctx.session.history;
-  const userHistory = history.filter((entry) =>
-    entry.fromId === ctx.message?.from.id
-  );
-
-  if (userHistory.length === 0) {
-    await ctx.reply("No history found.");
-  } else {
-    const historyMessages = userHistory.map((entry, index) => {
-      const date = new Date(entry.timestamp).toLocaleString();
-      return `${index + 1}. [${date}] - ${entry.link}`;
-    }).join("\n");
-
-    await ctx.reply(historyMessages, { parse_mode: "HTML" });
   }
 });
 
