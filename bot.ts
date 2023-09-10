@@ -16,7 +16,7 @@ interface sessionData {
 }
 type myContext = Context & SessionFlavor<sessionData>;
 
-const kv = await Deno.openKv("./kv.db");
+const kv = await Deno.openKv();
 
 export const bot = new Bot<myContext>(Deno.env.get("TOKEN") || "");
 
