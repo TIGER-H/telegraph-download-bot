@@ -38,13 +38,34 @@ bot.command("history", async (ctx) => {
     await ctx.reply("No history found.");
   } else {
     const historyMessages = userHistory.map((entry, index) => {
-      const date = new Date(entry.timestamp).toLocaleString();
-      return `${
-        index + 1
-      }. [${date}] - <a href="${entry.link}">${entry.title}</a>`;
+      // const date = new Date(entry.timestamp).toLocaleString();
+      return `${index + 1}. - <a href="${entry.link}">${entry.title}</a>`;
     }).join("\n");
 
-    await ctx.reply(historyMessages, { parse_mode: "HTML" });
+    await ctx.reply(historyMessages, {
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+    });
+  }
+});
+
+bot.command("clear", async (ctx) => {
+  const fromId = ctx.message?.from.id;
+
+  if (fromId) {
+    const userHistory = ctx.session.history.filter((entry) =>
+      entry.fromId === fromId
+    );
+    if (userHistory.length > 0) {
+      ctx.session.history = ctx.session.history.filter((entry) =>
+        entry.fromId !== fromId
+      );
+      await ctx.reply("Your history has been cleared.");
+    } else {
+      await ctx.reply("You have no history to clear.");
+    }
+  } else {
+    await ctx.reply("Error identifying user, cannot clear history.");
   }
 });
 
