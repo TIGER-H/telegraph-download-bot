@@ -12,7 +12,9 @@ import {
 const BASE_URL = new URL("https://telegra.ph");
 
 interface sessionData {
-  history: Array<{ link: string; timestamp: number; fromId: number }>;
+  history: Array<
+    { link: string; timestamp: number; fromId: number; title: string }
+  >;
 }
 type myContext = Context & SessionFlavor<sessionData>;
 
@@ -37,7 +39,9 @@ bot.command("history", async (ctx) => {
   } else {
     const historyMessages = userHistory.map((entry, index) => {
       const date = new Date(entry.timestamp).toLocaleString();
-      return `${index + 1}. [${date}] - ${entry.link}`;
+      return `${
+        index + 1
+      }. [${date}] - <a href="${entry.link}">${entry.title}</a>`;
     }).join("\n");
 
     await ctx.reply(historyMessages, { parse_mode: "HTML" });
@@ -53,7 +57,13 @@ bot.on("message:text", async (ctx) => {
       const response = await fetch(inputText);
       const text = await response.text();
 
-      const doc = new DOMParser().parseFromString(text, "text/html")!;
+      const doc = new DOMParser().parseFromString(text, "text/html");
+      if (!doc) {
+        throw new Error("Failed to parse the page.");
+      }
+
+      const title = doc.title || "Untitled";
+
       const imgElements = doc.querySelectorAll("img");
       const imgSrcArray = [...imgElements].map((img) =>
         (img as Element).getAttribute("src")
@@ -78,6 +88,7 @@ bot.on("message:text", async (ctx) => {
         link: inputText,
         timestamp: Date.now(),
         fromId,
+        title,
       });
       await ctx.reply("saved to your history.");
     } catch (error) {
