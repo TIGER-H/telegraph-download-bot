@@ -6,8 +6,8 @@ import { myContext } from "../types/myContext.ts";
 export function queueMiddleware() {
   return async (ctx: myContext, next: NextFunction) => {
     console.log("before enqueue", ctx.session);
-    const enqueue = (task: NextFunction) => {
-      taskQueue.push(task);
+    const enqueue = (task: (ctx: myContext) => Promise<void>) => {
+      taskQueue.push(() => task(ctx));
       eventEmitter.emit("newTask");
     };
     ctx.enqueueTask = enqueue;

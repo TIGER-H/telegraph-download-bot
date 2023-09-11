@@ -117,7 +117,7 @@ bot.on("message:text", async (ctx) => {
           title,
         });
 
-        console.log("after enqueue task", ctx.session);
+        console.log("After pushing to history: ", ctx.session);
         await ctx.reply("saved to your history.");
       });
     } else {
