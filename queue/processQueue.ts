@@ -11,8 +11,9 @@ export async function processQueue() {
     const task = taskQueue.shift();
     if (task) {
       try {
-        console.log("Processing a new task");
+        console.log("Processing a new task", task);
         await task();
+        console.log("Finished processing task", task);
       } catch (error) {
         console.error("Error processing task:", error);
       }

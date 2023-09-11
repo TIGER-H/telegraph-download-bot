@@ -78,6 +78,7 @@ bot.on("message:text", async (ctx) => {
 
     if (url.hostname === "telegra.ph") {
       ctx.enqueueTask(async () => {
+        console.log("before enqueue task", ctx.session);
         const response = await fetch(url);
         const text = await response.text();
 
@@ -116,6 +117,7 @@ bot.on("message:text", async (ctx) => {
           title,
         });
 
+        console.log("after enqueue task", ctx.session);
         await ctx.reply("saved to your history.");
       });
     } else {
