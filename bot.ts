@@ -1,3 +1,4 @@
+import { NextFunction } from "https://deno.land/x/grammy@v1.18.1/mod.ts";
 import {
   Bot,
   Context,
@@ -26,6 +27,8 @@ bot.use(session({
   initial: () => ({ history: [] }),
   storage: new DenoKVAdapter(kv),
 }));
+
+bot.use(responseTime);
 
 bot.command("start", (ctx) => ctx.reply("Welcome! Send me a telegra.ph link!"));
 bot.command("history", async (ctx) => {
@@ -136,3 +139,16 @@ function chunk<T>(array: T[], size: number): T[][] {
     return chunks;
   }, [] as T[][]);
 }
+
+/** Measures the response time of the bot, and logs it to `console` */
+async function responseTime(
+  _ctx: Context,
+  next: NextFunction, // is an alias for: () => Promise<void>
+): Promise<void> {
+  const before = Date.now();
+  await next();
+  const after = Date.now();
+  console.log(`Response time: ${after - before} ms`);
+}
+
+bot.use(responseTime);
