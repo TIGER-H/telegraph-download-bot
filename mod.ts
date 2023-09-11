@@ -1,5 +1,7 @@
-import { bot } from "./bot.ts";
+import { bot } from "./telegram/bot.ts";
 import { webhookCallback } from "./deps.deno.ts";
+import { eventEmitter } from "./queue/eventEmitter.ts";
+import { processQueue } from "./queue/processQueue.ts";
 
 const handleUpdate = webhookCallback(bot, "std/http");
 
@@ -15,4 +17,13 @@ Deno.serve(async (req) => {
     }
   }
   return new Response();
+});
+
+eventEmitter.on(
+  "newTask",
+  processQueue,
+);
+
+processQueue().catch((error) => {
+  console.error("Error in queue processor:", error);
 });

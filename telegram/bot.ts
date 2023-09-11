@@ -1,34 +1,30 @@
-import { NextFunction } from "https://deno.land/x/grammy@v1.18.1/mod.ts";
 import {
+  autoRetry,
   Bot,
-  Context,
   DenoKVAdapter,
   DOMParser,
   Element,
   InputMediaPhoto,
   session,
-  SessionFlavor,
-} from "./deps.deno.ts";
+} from "../deps.deno.ts";
+import { queueMiddleware } from "./middlewares/queueMiddleware.ts";
+import { responseTime } from "./middlewares/responseTime.ts";
+import { myContext } from "./types/myContext.ts";
+import { chunk } from "./utilities/chunk.ts";
 
 const BASE_URL = new URL("https://telegra.ph");
 
-interface sessionData {
-  history: Array<
-    { link: string; timestamp: number; fromId: number; title: string }
-  >;
-}
-type myContext = Context & SessionFlavor<sessionData>;
-
 const kv = await Deno.openKv();
-
 export const bot = new Bot<myContext>(Deno.env.get("TOKEN") || "");
+
+bot.api.config.use(autoRetry());
 
 bot.use(session({
   initial: () => ({ history: [] }),
   storage: new DenoKVAdapter(kv),
 }));
 
-bot.use(responseTime);
+bot.use(queueMiddleware());
 
 bot.command("start", (ctx) => ctx.reply("Welcome! Send me a telegra.ph link!"));
 bot.command("history", async (ctx) => {
@@ -80,43 +76,46 @@ bot.on("message:text", async (ctx) => {
     const url = new URL(inputText);
 
     if (url.hostname === "telegra.ph") {
-      const response = await fetch(url);
-      const text = await response.text();
+      ctx.enqueueTask(async () => {
+        const response = await fetch(url);
+        const text = await response.text();
 
-      const doc = new DOMParser().parseFromString(text, "text/html");
-      if (!doc) {
-        throw new Error("Failed to parse the page.");
-      }
-
-      const title = doc.title || "Untitled";
-
-      const imgElements = doc.querySelectorAll("img");
-      const imgSrcArray = [...imgElements].map((img) =>
-        (img as Element).getAttribute("src")
-      ).filter((src) => src !== null);
-
-      await ctx.reply(`I found ${imgSrcArray.length} images on this page.`);
-
-      if (imgSrcArray.length > 0) {
-        const batches = chunk(imgSrcArray, 10);
-        for (const batch of batches) {
-          const mediaGroup = batch.map((src) =>
-            ({
-              type: "photo",
-              media: new URL(src!, BASE_URL).toString(),
-            }) as InputMediaPhoto
-          );
-          await ctx.replyWithMediaGroup(mediaGroup);
+        const doc = new DOMParser().parseFromString(text, "text/html");
+        if (!doc) {
+          throw new Error("Failed to parse the page.");
         }
-      }
 
-      ctx.session.history.push({
-        link: inputText,
-        timestamp: Date.now(),
-        fromId,
-        title,
+        const title = doc.title || "Untitled";
+
+        const imgElements = doc.querySelectorAll("img");
+        const imgSrcArray = [...imgElements].map((img) =>
+          (img as Element).getAttribute("src")
+        ).filter((src) => src !== null);
+
+        await ctx.reply(`I found ${imgSrcArray.length} images on this page.`);
+
+        if (imgSrcArray.length > 0) {
+          const batches = chunk(imgSrcArray, 10);
+          for (const batch of batches) {
+            const mediaGroup = batch.map((src) =>
+              ({
+                type: "photo",
+                media: new URL(src!, BASE_URL).toString(),
+              }) as InputMediaPhoto
+            );
+
+            await ctx.replyWithMediaGroup(mediaGroup);
+          }
+        }
+
+        ctx.session.history.push({
+          link: inputText,
+          timestamp: Date.now(),
+          fromId,
+          title,
+        });
+        await ctx.reply("saved to your history.");
       });
-      await ctx.reply("saved to your history.");
     } else {
       throw new TypeError("Invalid telegra.ph link.");
     }
@@ -128,27 +127,5 @@ bot.on("message:text", async (ctx) => {
     }
   }
 });
-
-// utils
-function chunk<T>(array: T[], size: number): T[][] {
-  return array.reduce((chunks, item, idx) => {
-    if (idx % size === 0) {
-      chunks.push([]);
-    }
-    chunks[chunks.length - 1].push(item);
-    return chunks;
-  }, [] as T[][]);
-}
-
-/** Measures the response time of the bot, and logs it to `console` */
-async function responseTime(
-  _ctx: Context,
-  next: NextFunction, // is an alias for: () => Promise<void>
-): Promise<void> {
-  const before = Date.now();
-  await next();
-  const after = Date.now();
-  console.log(`Response time: ${after - before} ms`);
-}
 
 bot.use(responseTime);

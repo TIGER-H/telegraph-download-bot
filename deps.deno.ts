@@ -5,7 +5,10 @@ export {
   webhookCallback,
 } from "https://deno.land/x/grammy@v1.18.1/mod.ts";
 
-export type { SessionFlavor } from "https://deno.land/x/grammy@v1.18.1/mod.ts";
+export type {
+  NextFunction,
+  SessionFlavor,
+} from "https://deno.land/x/grammy@v1.18.1/mod.ts";
 
 export type {
   InputMediaPhoto,
@@ -17,3 +20,5 @@ export {
   DOMParser,
   Element,
 } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
+
+export { autoRetry } from "https://esm.sh/@grammyjs/auto-retry";
