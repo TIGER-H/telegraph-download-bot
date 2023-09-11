@@ -19,6 +19,7 @@ export const bot = new Bot<myContext>(Deno.env.get("TOKEN") || "");
 
 bot.api.config.use(autoRetry());
 
+bot.use(responseTime);
 bot.use(session({
   initial: () => ({ history: [] }),
   storage: new DenoKVAdapter(kv),
@@ -114,6 +115,7 @@ bot.on("message:text", async (ctx) => {
           fromId,
           title,
         });
+
         await ctx.reply("saved to your history.");
       });
     } else {
@@ -127,5 +129,3 @@ bot.on("message:text", async (ctx) => {
     }
   }
 });
-
-bot.use(responseTime);
