@@ -114,7 +114,7 @@ bot.on("message:text", async (ctx) => {
           fromId,
           title,
         });
-        await kv.set(["sessions", ctx.chat.id], ctx.session);
+        await kv.set(["sessions", ctx.chat.id.toString()], ctx.session);
 
         await ctx.reply("saved to your history.");
       });

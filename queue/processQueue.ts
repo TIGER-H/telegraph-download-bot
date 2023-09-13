@@ -18,6 +18,5 @@ export async function processQueue() {
     }
   }
 
-  console.log("Finished processing tasks");
   isProcessing = false;
 }
