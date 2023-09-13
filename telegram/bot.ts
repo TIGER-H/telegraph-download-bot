@@ -113,14 +113,18 @@ bot.on("message:text", async (ctx) => {
 
         const currentHistory = await kv.get<sessionData>(sessionKey);
 
-        currentHistory.value?.history.push({
+        const newHistoryEntry = {
           link: inputText,
           timestamp: Date.now(),
           fromId,
           title,
-        });
+        };
 
-        await kv.set(sessionKey, currentHistory);
+        const updatedHistory = currentHistory.value
+          ? [...currentHistory.value.history, newHistoryEntry]
+          : [newHistoryEntry];
+
+        await kv.set(sessionKey, { history: updatedHistory });
 
         await ctx.reply("Link saved to your history.");
       });
