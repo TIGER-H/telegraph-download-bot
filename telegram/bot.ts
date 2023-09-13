@@ -11,6 +11,7 @@ import { eventEmitter } from "../queue/eventEmitter.ts";
 import { taskQueue } from "../queue/processQueue.ts";
 import { responseTime } from "./middlewares/responseTime.ts";
 import { myContext } from "./types/myContext.ts";
+import { sessionData } from "./types/sessionData.ts";
 import { chunk } from "./utilities/chunk.ts";
 
 const BASE_URL = new URL("https://telegra.ph");
@@ -76,6 +77,8 @@ bot.on("message:text", async (ctx) => {
     const url = new URL(inputText);
 
     if (url.hostname === "telegra.ph") {
+      const sessionKey = ["sessions", ctx.chat.id.toString()];
+
       taskQueue.push(async () => {
         const response = await fetch(url);
         const text = await response.text();
@@ -92,7 +95,7 @@ bot.on("message:text", async (ctx) => {
           (img as Element).getAttribute("src")
         ).filter((src) => src !== null);
 
-        await ctx.reply(`I found ${imgSrcArray.length} images on this page.`);
+        await ctx.reply(`${imgSrcArray.length} images on this page.`);
 
         if (imgSrcArray.length > 0) {
           const batches = chunk(imgSrcArray, 10);
@@ -108,15 +111,18 @@ bot.on("message:text", async (ctx) => {
           }
         }
 
-        ctx.session.history.push({
+        const currentHistory = await kv.get<sessionData>(sessionKey);
+
+        currentHistory.value?.history.push({
           link: inputText,
           timestamp: Date.now(),
           fromId,
           title,
         });
-        await kv.set(["sessions", ctx.chat.id.toString()], ctx.session);
 
-        await ctx.reply("saved to your history.");
+        await kv.set(sessionKey, currentHistory);
+
+        await ctx.reply("Link saved to your history.");
       });
       eventEmitter.emit("newTask");
     } else {
