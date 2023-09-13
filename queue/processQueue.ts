@@ -1,6 +1,4 @@
-import { NextFunction } from "../deps.deno.ts";
-
-export const taskQueue: Array<NextFunction> = [];
+export const taskQueue: Array<() => Promise<void>> = [];
 let isProcessing = false;
 
 export async function processQueue() {

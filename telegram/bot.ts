@@ -7,7 +7,8 @@ import {
   InputMediaPhoto,
   session,
 } from "../deps.deno.ts";
-import { queueMiddleware } from "./middlewares/queueMiddleware.ts";
+import { eventEmitter } from "../queue/eventEmitter.ts";
+import { taskQueue } from "../queue/processQueue.ts";
 import { responseTime } from "./middlewares/responseTime.ts";
 import { myContext } from "./types/myContext.ts";
 import { chunk } from "./utilities/chunk.ts";
@@ -24,8 +25,6 @@ bot.use(session({
   initial: () => ({ history: [] }),
   storage: new DenoKVAdapter(kv),
 }));
-
-bot.use(queueMiddleware());
 
 bot.command("start", (ctx) => ctx.reply("Welcome! Send me a telegra.ph link!"));
 bot.command("history", async (ctx) => {
@@ -77,8 +76,7 @@ bot.on("message:text", async (ctx) => {
     const url = new URL(inputText);
 
     if (url.hostname === "telegra.ph") {
-      ctx.enqueueTask(async () => {
-        console.log("before enqueue task", ctx.session);
+      taskQueue.push(async () => {
         const response = await fetch(url);
         const text = await response.text();
 
@@ -116,10 +114,11 @@ bot.on("message:text", async (ctx) => {
           fromId,
           title,
         });
+        await kv.set(["sessions", ctx.chat.id], ctx.session);
 
-        console.log("After pushing to history: ", ctx.session);
         await ctx.reply("saved to your history.");
       });
+      eventEmitter.emit("newTask");
     } else {
       throw new TypeError("Invalid telegra.ph link.");
     }
