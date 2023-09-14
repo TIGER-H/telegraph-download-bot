@@ -39,7 +39,7 @@ bot.command("history", async (ctx) => {
   } else {
     const historyMessages = userHistory.map((entry, index) => {
       // const date = new Date(entry.timestamp).toLocaleString();
-      return `${index + 1}. - <a href="${entry.link}">${entry.title}</a>`;
+      return `${index + 1}. <a href="${entry.link}">${entry.title}</a>`;
     }).join("\n");
 
     await ctx.reply(historyMessages, {
