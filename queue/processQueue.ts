@@ -1,22 +1,24 @@
 export const taskQueue: Array<() => Promise<void>> = [];
-let isProcessing = false;
+let currentProcesses = 0;
+const MAX_CONCURRENT_PROCESS = 5;
 
-export async function processQueue() {
-  if (isProcessing) return;
-  isProcessing = true;
+export function processQueue() {
+  if (currentProcesses > MAX_CONCURRENT_PROCESS) return;
 
-  while (taskQueue.length > 0) {
+  while (taskQueue.length > 0 && currentProcesses < MAX_CONCURRENT_PROCESS) {
     const task = taskQueue.shift();
     if (task) {
-      try {
-        console.log("Processing a new task", task);
-        await task();
-        console.log("Finished processing task", task);
-      } catch (error) {
-        console.error("Error processing task:", error);
-      }
+      task()
+        .then(() => {
+          console.log("Finished processing task:", task);
+        })
+        .catch((error) => {
+          console.error("Error processing task:", error);
+        })
+        .finally(() => {
+          currentProcesses -= 1;
+          processQueue();
+        });
     }
   }
-
-  isProcessing = false;
 }
