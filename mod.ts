@@ -24,6 +24,4 @@ eventEmitter.on(
   processQueue,
 );
 
-processQueue().catch((error) => {
-  console.error("Error in queue processor:", error);
-});
+processQueue();
