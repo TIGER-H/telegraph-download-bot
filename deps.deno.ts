@@ -22,3 +22,5 @@ export {
 } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
 
 export { autoRetry } from "https://esm.sh/@grammyjs/auto-retry";
+
+export { Menu } from "https://deno.land/x/grammy_menu@v1.2.1/mod.ts";

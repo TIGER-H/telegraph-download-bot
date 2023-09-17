@@ -5,27 +5,53 @@ import {
   DOMParser,
   Element,
   InputMediaPhoto,
+  Menu,
   session,
 } from "../deps.deno.ts";
 import { eventEmitter } from "../queue/eventEmitter.ts";
 import { taskQueue } from "../queue/processQueue.ts";
+import { TELEGRAPH_URL } from "../utils/constants.ts";
+import { getEnvOrThrow } from "../utils/misc.ts";
 import { responseTime } from "./middlewares/responseTime.ts";
 import { myContext } from "./types/myContext.ts";
 import { sessionData } from "./types/sessionData.ts";
 import { chunk } from "./utilities/chunk.ts";
 
-const BASE_URL = new URL("https://telegra.ph");
-
 const kv = await Deno.openKv();
-export const bot = new Bot<myContext>(Deno.env.get("TOKEN") || "");
+
+const BOT_TOKEN = getEnvOrThrow("TOKEN");
+export const bot = new Bot<myContext>(BOT_TOKEN);
+
+const clearHistoryMenu = new Menu<myContext>("clear_history")
+  .text(
+    "Yes",
+    async (ctx) => {
+      ctx.menu.close();
+      await ctx.editMessageText("Clearing your history...");
+
+      const fromId = ctx.from.id;
+      ctx.session.history = ctx.session.history.filter((entry) =>
+        entry.fromId !== fromId
+      );
+      await ctx.editMessageText("Your history has been cleared.");
+    },
+  )
+  .row()
+  .text(
+    "No",
+    async (ctx) => {
+      ctx.menu.close();
+      await ctx.editMessageText("Your history has not been cleared.");
+    },
+  );
 
 bot.api.config.use(autoRetry());
-
 bot.use(responseTime);
 bot.use(session({
   initial: () => ({ history: [] }),
   storage: new DenoKVAdapter(kv),
 }));
+bot.use(clearHistoryMenu);
 
 bot.command("start", (ctx) => ctx.reply("Welcome! Send me a telegra.ph link!"));
 bot.command("history", async (ctx) => {
@@ -57,10 +83,10 @@ bot.command("clear", async (ctx) => {
       entry.fromId === fromId
     );
     if (userHistory.length > 0) {
-      ctx.session.history = ctx.session.history.filter((entry) =>
-        entry.fromId !== fromId
-      );
-      await ctx.reply("Your history has been cleared.");
+      // ask user permission before clear
+      await ctx.reply("Clear your history?", {
+        reply_markup: clearHistoryMenu,
+      });
     } else {
       await ctx.reply("You have no history to clear.");
     }
@@ -103,7 +129,7 @@ bot.on("message:text", async (ctx) => {
             const mediaGroup = batch.map((src) =>
               ({
                 type: "photo",
-                media: new URL(src!, BASE_URL).toString(),
+                media: new URL(src!, TELEGRAPH_URL).toString(),
               }) as InputMediaPhoto
             );
 
