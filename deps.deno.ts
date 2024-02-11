@@ -3,6 +3,7 @@ export {
   Context,
   session,
   webhookCallback,
+  InputMediaBuilder,
 } from "https://deno.land/x/grammy@v1.18.1/mod.ts";
 
 export type {
@@ -10,9 +11,7 @@ export type {
   SessionFlavor,
 } from "https://deno.land/x/grammy@v1.18.1/mod.ts";
 
-export type {
-  InputMediaPhoto,
-} from "https://deno.land/x/grammy@v1.18.1/types.deno.ts";
+export type { InputMediaPhoto } from "https://deno.land/x/grammy@v1.18.1/types.deno.ts";
 
 export { DenoKVAdapter } from "https://deno.land/x/grammy_storages/denokv/src/mod.ts";
 
