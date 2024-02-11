@@ -126,7 +126,7 @@ bot.on("message:text", async (ctx) => {
           const batches = chunk(imgSrcArray, 10);
           for (const batch of batches) {
             const mediaGroup: InputMediaPhoto[] = batch.map((src) =>
-              InputMediaBuilder.photo(src!)
+              InputMediaBuilder.photo(new URL(src!, TELEGRAPH_URL).toString())
             );
 
             await ctx.replyWithMediaGroup(mediaGroup);
